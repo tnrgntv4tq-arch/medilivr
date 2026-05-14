@@ -26,6 +26,8 @@ model User {
   clientOrders   Order[] @relation("ClientOrders")
   pharmacyOrders Order[] @relation("PharmacyOrders")
   deliveryOrders Order[] @relation("DeliveryOrders")
+  reviewsGiven   Review[] @relation("ReviewAuthor")
+  reviewsReceived Review[] @relation("ReviewTarget")
 }
 
 model Order {
@@ -62,6 +64,29 @@ model Order {
 
   notes             String?
 
+  reviews           Review[]
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String?
+
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+
+  authorId  String
+  author    User     @relation("ReviewAuthor", fields: [authorId], references: [id])
+
+  targetId  String
+  target    User     @relation("ReviewTarget", fields: [targetId], references: [id])
+
+  type      String
+
+  createdAt DateTime @default(now())
+
+  @@unique([orderId, authorId, type])
 }

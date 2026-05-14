@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Upload, MapPin, CreditCard, Camera, FileText, ChevronRight, ChevronLeft, Check, Shield, Locate, Search, Loader2 } from 'lucide-react';
+import { Upload, MapPin, CreditCard, Camera, FileText, ChevronRight, ChevronLeft, Check, Shield, Locate, Search, Loader2, Star } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const Map = dynamic(() => import('@/components/Map'), { ssr: false });
@@ -13,6 +13,8 @@ interface Pharmacy {
   address: string;
   lat: number;
   lng: number;
+  avgRating: number | null;
+  reviewCount: number;
 }
 
 interface AddressSuggestion {
@@ -360,7 +362,14 @@ export default function NewOrderPage() {
                     ? 'border-primary-500 bg-primary-50/50 shadow-sm'
                     : 'border-dark-100 hover:border-dark-200'
                 }`}>
-                <p className="font-semibold text-dark-900">{p.pharmacyName}</p>
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-dark-900">{p.pharmacyName}</p>
+                  {p.avgRating && (
+                    <span className="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {p.avgRating} ({p.reviewCount})
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-dark-500">{p.address}</p>
               </button>
             ))}

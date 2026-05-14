@@ -17,8 +17,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       clientAddress: true,
       deliveryLat: true,
       deliveryLng: true,
-      pharmacy: { select: { lat: true, lng: true, pharmacyName: true, address: true } },
-      delivery: { select: { name: true, phone: true } },
+      pharmacyId: true,
+      deliveryId: true,
+      pharmacy: { select: { id: true, lat: true, lng: true, pharmacyName: true, address: true } },
+      delivery: { select: { id: true, name: true, phone: true } },
     },
   });
 
