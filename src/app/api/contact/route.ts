@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const CONTACT_EMAIL = 'alibensalem.french@gmail.com';
+const CONTACT_EMAIL = 'bensalem_a@outlook.com';
 
 export async function POST(req: NextRequest) {
   const { name, email, subject, message } = await req.json();
