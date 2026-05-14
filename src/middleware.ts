@@ -5,6 +5,7 @@ const protectedPaths: Record<string, string> = {
   '/client': 'CLIENT',
   '/pharmacy': 'PHARMACY',
   '/delivery': 'DELIVERY',
+  '/admin': 'ADMIN',
 };
 
 export async function middleware(req: NextRequest) {
@@ -27,5 +28,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/client/:path*', '/pharmacy/:path*', '/delivery/:path*'],
+  matcher: ['/client/:path*', '/pharmacy/:path*', '/delivery/:path*', '/admin/:path*'],
 };

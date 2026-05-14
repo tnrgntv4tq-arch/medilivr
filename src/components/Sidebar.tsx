@@ -31,6 +31,11 @@ const MENU_ITEMS: Record<string, { label: string; href: string; icon: React.Reac
     { label: 'Tableau de bord', href: '/delivery/dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
     { label: 'Mes missions', href: '/delivery/missions', icon: <Navigation className="h-5 w-5" /> },
   ],
+  ADMIN: [
+    { label: 'Tableau de bord', href: '/admin/dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
+    { label: 'Utilisateurs', href: '/admin/users', icon: <Users className="h-5 w-5" /> },
+    { label: 'Commandes', href: '/admin/orders', icon: <ClipboardList className="h-5 w-5" /> },
+  ],
 };
 
 const MORE_ITEMS = [
