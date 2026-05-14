@@ -4,6 +4,7 @@ import { useState, useEffect, use, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, MapPin, Phone, User, Navigation, CheckCircle, Package, Shield, Euro, Locate } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
+import Chat from '@/components/Chat';
 import dynamic from 'next/dynamic';
 
 const Map = dynamic(() => import('@/components/Map'), { ssr: false });
@@ -28,8 +29,10 @@ export default function MissionPage({ params }: { params: Promise<{ id: string }
   const [loading, setLoading] = useState(false);
   const [myLat, setMyLat] = useState(48.8566);
   const [myLng, setMyLng] = useState(2.3522);
+  const [userId, setUserId] = useState('');
 
   useEffect(() => {
+    fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(d => d && setUserId(d.user.id));
     fetch(`/api/orders/${id}`).then(r => r.json()).then(d => setMission(d.order));
   }, [id]);
 
@@ -193,6 +196,15 @@ export default function MissionPage({ params }: { params: Promise<{ id: string }
         <div className="flex items-center justify-center gap-2 text-xs text-dark-400">
           <Locate className="h-3.5 w-3.5 animate-pulse-soft" /> Position GPS transmise au client
         </div>
+      )}
+
+      {/* Chat */}
+      {userId && (
+        <Chat
+          orderId={id}
+          currentUserId={userId}
+          enabled={['PICKED_UP', 'IN_TRANSIT'].includes(mission.status)}
+        />
       )}
     </div>
   );

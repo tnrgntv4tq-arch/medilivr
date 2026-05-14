@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from 'react';
 import { Package, MapPin, Phone, Clock, User, Wifi, WifiOff, Star, Send } from 'lucide-react';
+import Chat from '@/components/Chat';
 import dynamic from 'next/dynamic';
 import StatusBadge from '@/components/StatusBadge';
 import StarRating from '@/components/StarRating';
@@ -37,6 +38,7 @@ export default function TrackPage({ params }: { params: Promise<{ id: string }> 
   const [tracking, setTracking] = useState<Tracking | null>(null);
   const sse = useTrackingSSE(id);
 
+  const [userId, setUserId] = useState('');
   const [existingReviews, setExistingReviews] = useState<ExistingReview[]>([]);
   const [pharmacyRating, setPharmacyRating] = useState(0);
   const [deliveryRating, setDeliveryRating] = useState(0);
@@ -46,6 +48,7 @@ export default function TrackPage({ params }: { params: Promise<{ id: string }> 
   const [reviewSuccess, setReviewSuccess] = useState<string[]>([]);
 
   useEffect(() => {
+    fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(d => d && setUserId(d.user.id));
     fetch(`/api/tracking/${id}`).then(r => r.json()).then(d => setTracking(d.tracking));
     fetch(`/api/reviews?orderId=${id}`).then(r => r.json()).then(d => {
       if (d.reviews) setExistingReviews(d.reviews);
@@ -280,6 +283,15 @@ export default function TrackPage({ params }: { params: Promise<{ id: string }> 
             </div>
           )}
         </div>
+      )}
+
+      {/* Chat */}
+      {userId && tracking.delivery && (
+        <Chat
+          orderId={id}
+          currentUserId={userId}
+          enabled={['PICKED_UP', 'IN_TRANSIT'].includes(tracking.status)}
+        />
       )}
     </div>
   );
