@@ -29,6 +29,7 @@ model User {
   reviewsGiven   Review[] @relation("ReviewAuthor")
   reviewsReceived Review[] @relation("ReviewTarget")
   messages       Message[]
+  notifications  Notification[]
 }
 
 model Order {
@@ -85,6 +86,20 @@ model Message {
   createdAt DateTime @default(now())
 
   @@index([orderId, createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  body      String
+  type      String
+  orderId   String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read, createdAt])
 }
 
 model Review {

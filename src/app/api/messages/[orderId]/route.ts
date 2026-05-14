@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { notifyNewMessage } from '@/lib/notifications';
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
   const session = await getSession();
@@ -48,6 +49,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     },
     include: { sender: { select: { id: true, name: true, role: true } } },
   });
+
+  const recipientId = order.clientId === session.userId ? order.deliveryId : order.clientId;
+  if (recipientId) {
+    notifyNewMessage(orderId, recipientId, session.name).catch(() => {});
+  }
 
   return NextResponse.json({ message });
 }

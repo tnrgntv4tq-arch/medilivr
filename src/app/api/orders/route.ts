@@ -5,6 +5,7 @@ import { encryptBuffer, encryptKey } from '@/lib/encryption';
 import { haversineDistance, calculatePrice } from '@/lib/distance';
 import { notifyNewOrder } from '@/lib/email';
 import { smsNewOrder } from '@/lib/sms';
+import { notifyOrderCreated } from '@/lib/notifications';
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
@@ -76,6 +77,8 @@ export async function POST(req: NextRequest) {
         price: pricing.totalPrice,
       }).catch(() => {});
     }
+
+    notifyOrderCreated(order.id, pharmacyId, session.name).catch(() => {});
 
     return NextResponse.json({ order: { id: order.id, status: order.status, totalPrice: order.totalPrice, distance: order.distance } });
   } catch (error) {

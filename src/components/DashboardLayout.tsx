@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Bell } from 'lucide-react';
+import { Search } from 'lucide-react';
 import Sidebar from './Sidebar';
+import NotificationBell from './NotificationBell';
 
 interface UserData { name: string; role: string; }
 
@@ -30,10 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button className="relative w-9 h-9 bg-white rounded-xl border border-dark-100 flex items-center justify-center text-dark-400 hover:text-dark-600 hover:border-dark-200 transition-colors">
-                <Bell className="h-4 w-4" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white font-bold flex items-center justify-center">3</span>
-              </button>
+              <NotificationBell />
               <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xs font-bold">
                 {initials}
               </div>

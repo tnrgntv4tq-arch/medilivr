@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { prisma } from '@/lib/db';
 import { notifyPaymentConfirmed } from '@/lib/email';
 import { smsPaymentConfirmed } from '@/lib/sms';
+import { notifyPayment } from '@/lib/notifications';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -49,6 +50,8 @@ export async function POST(req: NextRequest) {
             price: order.totalPrice || 0,
           }).catch(() => {});
         }
+
+        notifyPayment(order.id, order.clientId).catch(() => {});
       }
     }
 

@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { notifyStatusChange } from '@/lib/email';
 import { smsStatusChange } from '@/lib/sms';
+import { notifyStatusChange as pushStatusChange } from '@/lib/notifications';
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -98,6 +99,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         deliveryName: updated.delivery?.name,
       }).catch(() => {});
     }
+
+    pushStatusChange(
+      updated.id,
+      updated.clientId,
+      status,
+      updated.pharmacy?.pharmacyName || updated.pharmacy?.name || 'Pharmacie',
+      updated.delivery?.name,
+    ).catch(() => {});
   }
 
   return NextResponse.json({ order: { id: updated.id, status: updated.status } });
