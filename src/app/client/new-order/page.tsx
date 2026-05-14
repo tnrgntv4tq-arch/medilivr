@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Upload, MapPin, CreditCard, Camera, FileText, ChevronRight, ChevronLeft, Check, Shield, Locate, Search, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -21,12 +21,18 @@ interface AddressSuggestion {
   lon: string;
 }
 
+const NOMINATIM_HEADERS = {
+  'Accept-Language': 'fr',
+  'User-Agent': 'MediLivr/1.0 (medication delivery app)',
+};
+
 async function reverseGeocode(lat: number, lng: number): Promise<string> {
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-      { headers: { 'Accept-Language': 'fr' } }
+      { headers: NOMINATIM_HEADERS }
     );
+    if (!res.ok) return '';
     const data = await res.json();
     return data.display_name || '';
   } catch {
@@ -38,8 +44,9 @@ async function searchAddress(query: string): Promise<AddressSuggestion[]> {
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=fr`,
-      { headers: { 'Accept-Language': 'fr' } }
+      { headers: NOMINATIM_HEADERS }
     );
+    if (!res.ok) return [];
     return await res.json();
   } catch {
     return [];
@@ -124,12 +131,19 @@ export default function NewOrderPage() {
     setSuggestions([]);
   };
 
-  const handleMapClick = async (newLat: number, newLng: number) => {
+  const handleMapClick = useCallback(async (newLat: number, newLng: number) => {
     setLat(newLat);
     setLng(newLng);
     const addr = await reverseGeocode(newLat, newLng);
     if (addr) setAddress(addr);
-  };
+  }, []);
+
+  const mapCenter = useMemo<[number, number]>(() => [lat, lng], [lat, lng]);
+
+  const mapMarkers = useMemo(() => [
+    { lat, lng, label: 'Vous', color: 'blue' },
+    ...pharmacies.map(p => ({ lat: p.lat || 0, lng: p.lng || 0, label: p.pharmacyName || '', color: 'green' })),
+  ], [lat, lng, pharmacies]);
 
   const handleFile = (f: File) => {
     setFile(f);
@@ -321,12 +335,9 @@ export default function NewOrderPage() {
           </div>
 
           <Map
-            center={[lat, lng]}
+            center={mapCenter}
             className="h-48"
-            markers={[
-              { lat, lng, label: 'Vous', color: 'blue' },
-              ...pharmacies.map(p => ({ lat: p.lat || 0, lng: p.lng || 0, label: p.pharmacyName || '', color: 'green' })),
-            ]}
+            markers={mapMarkers}
             onMapClick={handleMapClick}
           />
 
