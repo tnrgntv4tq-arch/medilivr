@@ -32,6 +32,7 @@ export default function Home() {
             <span className="text-xl font-bold text-dark-900">Medi<span className="text-primary-500">Livr</span></span>
           </div>
           <div className="hidden md:flex items-center gap-2">
+            <Link href="/contact" className="btn-ghost text-sm">Contact</Link>
             <Link href="/auth/register?role=PHARMACY" className="btn-ghost text-sm flex items-center gap-1.5">
               <Search className="h-4 w-4" /> Vous êtes pharmacien ?
             </Link>
@@ -316,6 +317,7 @@ export default function Home() {
             <div>
               <h4 className="text-white font-semibold mb-3 text-sm">Contact</h4>
               <ul className="space-y-2 text-sm">
+                <li><Link href="/contact" className="hover:text-primary-400 transition-colors">Nous contacter</Link></li>
                 <li>contact@medilivr.fr</li>
                 <li>Paris, France</li>
               </ul>
