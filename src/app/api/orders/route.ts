@@ -3,6 +3,8 @@ import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { encryptBuffer, encryptKey } from '@/lib/encryption';
 import { haversineDistance, calculatePrice } from '@/lib/distance';
+import { notifyNewOrder } from '@/lib/email';
+import { smsNewOrder } from '@/lib/sms';
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
@@ -55,6 +57,25 @@ export async function POST(req: NextRequest) {
         notes,
       },
     });
+
+    notifyNewOrder({
+      pharmacyEmail: pharmacy.email,
+      pharmacyName: pharmacy.pharmacyName || pharmacy.name,
+      clientName: session.name,
+      orderId: order.id,
+      address: clientAddress,
+      price: pricing.totalPrice,
+      notes,
+    }).catch(() => {});
+
+    if (pharmacy.phone) {
+      smsNewOrder({
+        pharmacyPhone: pharmacy.phone,
+        clientName: session.name,
+        orderId: order.id,
+        price: pricing.totalPrice,
+      }).catch(() => {});
+    }
 
     return NextResponse.json({ order: { id: order.id, status: order.status, totalPrice: order.totalPrice, distance: order.distance } });
   } catch (error) {

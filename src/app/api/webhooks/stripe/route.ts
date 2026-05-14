@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/db';
+import { notifyPaymentConfirmed } from '@/lib/email';
+import { smsPaymentConfirmed } from '@/lib/sms';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -23,10 +25,30 @@ export async function POST(req: NextRequest) {
       const orderId = session.metadata?.orderId;
 
       if (orderId && session.payment_status === 'paid') {
-        await prisma.order.update({
+        const order = await prisma.order.update({
           where: { id: orderId },
           data: { paid: true, stripePaymentId: session.payment_intent as string },
+          include: {
+            client: { select: { email: true, name: true, phone: true } },
+            pharmacy: { select: { name: true, pharmacyName: true } },
+          },
         });
+
+        notifyPaymentConfirmed({
+          clientEmail: order.client.email,
+          clientName: order.client.name,
+          orderId: order.id,
+          price: order.totalPrice || 0,
+          pharmacyName: order.pharmacy?.pharmacyName || order.pharmacy?.name || 'Pharmacie',
+        }).catch(() => {});
+
+        if (order.client.phone) {
+          smsPaymentConfirmed({
+            clientPhone: order.client.phone,
+            orderId: order.id,
+            price: order.totalPrice || 0,
+          }).catch(() => {});
+        }
       }
     }
 

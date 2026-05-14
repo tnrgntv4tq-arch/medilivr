@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { notifyStatusChange } from '@/lib/email';
+import { smsStatusChange } from '@/lib/sms';
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -68,7 +70,35 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     updateData.deliveryId = session.userId;
   }
 
-  const updated = await prisma.order.update({ where: { id }, data: updateData });
+  const updated = await prisma.order.update({
+    where: { id },
+    data: updateData,
+    include: {
+      client: { select: { email: true, name: true, phone: true } },
+      pharmacy: { select: { name: true, pharmacyName: true } },
+      delivery: { select: { name: true } },
+    },
+  });
+
+  if (status) {
+    notifyStatusChange({
+      clientEmail: updated.client.email,
+      clientName: updated.client.name,
+      orderId: updated.id,
+      newStatus: status,
+      pharmacyName: updated.pharmacy?.pharmacyName || updated.pharmacy?.name || 'Pharmacie',
+      deliveryName: updated.delivery?.name,
+    }).catch(() => {});
+
+    if (updated.client.phone) {
+      smsStatusChange({
+        clientPhone: updated.client.phone,
+        orderId: updated.id,
+        newStatus: status,
+        deliveryName: updated.delivery?.name,
+      }).catch(() => {});
+    }
+  }
 
   return NextResponse.json({ order: { id: updated.id, status: updated.status } });
 }
