@@ -77,7 +77,7 @@ export default function Home() {
               </Link>
             </div>
 
-            <div className="flex items-center justify-center gap-8 mt-12 text-sm text-dark-400">
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 mt-12 text-sm text-dark-400">
               <div className="flex items-center gap-2"><Lock className="h-4 w-4 text-primary-500" /> Chiffrement AES-256</div>
               <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary-500" /> Livraison rapide</div>
               <div className="flex items-center gap-2"><Euro className="h-4 w-4 text-primary-500" /> Tarifs transparents</div>

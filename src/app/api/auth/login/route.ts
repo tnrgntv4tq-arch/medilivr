@@ -2,9 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { createToken } from '@/lib/auth';
 import { compare } from 'bcryptjs';
+import { rateLimit } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const { success } = rateLimit(ip, 5, 60_000);
+    if (!success) {
+      return NextResponse.json({ error: 'Trop de tentatives, réessayez plus tard' }, { status: 429 });
+    }
+
     const body = await req.json();
     const email = String(body.email || '').trim().toLowerCase();
     const password = String(body.password || '');
