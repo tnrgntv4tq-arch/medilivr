@@ -20,6 +20,7 @@ interface UserData {
 const MENU_ITEMS: Record<string, { label: string; href: string; icon: React.ReactNode }[]> = {
   CLIENT: [
     { label: 'Tableau de bord', href: '/client/dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
+    { label: 'Pharmacies', href: '/client/pharmacies', icon: <Building2 className="h-5 w-5" /> },
     { label: 'Nouvelle commande', href: '/client/new-order', icon: <Plus className="h-5 w-5" /> },
     { label: 'Mes commandes', href: '/client/orders', icon: <List className="h-5 w-5" /> },
   ],
