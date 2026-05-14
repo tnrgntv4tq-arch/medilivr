@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, MapPin, CreditCard, Camera, FileText, ChevronRight, ChevronLeft, Check, Shield, Locate } from 'lucide-react';
+import { Upload, MapPin, CreditCard, Camera, FileText, ChevronRight, ChevronLeft, Check, Shield, Locate, Search, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const Map = dynamic(() => import('@/components/Map'), { ssr: false });
@@ -13,6 +13,37 @@ interface Pharmacy {
   address: string;
   lat: number;
   lng: number;
+}
+
+interface AddressSuggestion {
+  display_name: string;
+  lat: string;
+  lon: string;
+}
+
+async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+      { headers: { 'Accept-Language': 'fr' } }
+    );
+    const data = await res.json();
+    return data.display_name || '';
+  } catch {
+    return '';
+  }
+}
+
+async function searchAddress(query: string): Promise<AddressSuggestion[]> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=fr`,
+      { headers: { 'Accept-Language': 'fr' } }
+    );
+    return await res.json();
+  } catch {
+    return [];
+  }
 }
 
 export default function NewOrderPage() {
@@ -31,13 +62,74 @@ export default function NewOrderPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     fetch('/api/pharmacies').then(r => r.json()).then(d => setPharmacies(d.pharmacies || []));
-    navigator.geolocation?.getCurrentPosition(pos => {
-      setLat(pos.coords.latitude);
-      setLng(pos.coords.longitude);
-    });
+    handleLocate();
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLocate = () => {
+    if (!navigator.geolocation) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const newLat = pos.coords.latitude;
+        const newLng = pos.coords.longitude;
+        setLat(newLat);
+        setLng(newLng);
+        const addr = await reverseGeocode(newLat, newLng);
+        if (addr) setAddress(addr);
+        setLocating(false);
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const handleAddressChange = (value: string) => {
+    setAddress(value);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (value.length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    searchTimeout.current = setTimeout(async () => {
+      const results = await searchAddress(value);
+      setSuggestions(results);
+      setShowSuggestions(results.length > 0);
+    }, 400);
+  };
+
+  const selectSuggestion = (s: AddressSuggestion) => {
+    setAddress(s.display_name);
+    setLat(parseFloat(s.lat));
+    setLng(parseFloat(s.lon));
+    setShowSuggestions(false);
+    setSuggestions([]);
+  };
+
+  const handleMapClick = async (newLat: number, newLng: number) => {
+    setLat(newLat);
+    setLng(newLng);
+    const addr = await reverseGeocode(newLat, newLng);
+    if (addr) setAddress(addr);
+  };
 
   const handleFile = (f: File) => {
     setFile(f);
@@ -186,14 +278,46 @@ export default function NewOrderPage() {
 
           <div>
             <label className="label">Adresse de livraison</label>
-            <div className="relative">
-              <MapPin className="absolute left-4 top-4 h-5 w-5 text-dark-400" />
-              <input type="text" value={address} onChange={e => setAddress(e.target.value)} className="input pl-12 pr-24" placeholder="Votre adresse" />
-              <button type="button" onClick={() => navigator.geolocation?.getCurrentPosition(p => { setLat(p.coords.latitude); setLng(p.coords.longitude); })}
-                className="absolute right-2 top-2 flex items-center gap-1 px-3 py-2 text-xs font-medium text-primary-600 bg-primary-50 rounded-xl hover:bg-primary-100 transition-colors">
-                <Locate className="h-3.5 w-3.5" /> Localiser
+            <div className="relative" ref={suggestionsRef}>
+              <Search className="absolute left-4 top-4 h-5 w-5 text-dark-400" />
+              <input
+                type="text"
+                value={address}
+                onChange={e => handleAddressChange(e.target.value)}
+                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                className="input pl-12 pr-24"
+                placeholder="Tapez votre adresse..."
+              />
+              <button
+                type="button"
+                onClick={handleLocate}
+                disabled={locating}
+                className="absolute right-2 top-2 flex items-center gap-1 px-3 py-2 text-xs font-medium text-primary-600 bg-primary-50 rounded-xl hover:bg-primary-100 transition-colors"
+              >
+                {locating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Locate className="h-3.5 w-3.5" />}
+                {locating ? 'GPS...' : 'Localiser'}
               </button>
+
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-dark-200 rounded-xl shadow-lg overflow-hidden">
+                  {suggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      onClick={() => selectSuggestion(s)}
+                      className="w-full text-left px-4 py-3 text-sm hover:bg-primary-50 transition-colors flex items-start gap-3 border-b border-dark-50 last:border-0"
+                    >
+                      <MapPin className="h-4 w-4 text-primary-500 mt-0.5 flex-shrink-0" />
+                      <span className="text-dark-700 line-clamp-2">{s.display_name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
+            {address && (
+              <p className="text-xs text-primary-600 mt-1.5 flex items-center gap-1">
+                <MapPin className="h-3 w-3" /> {address.length > 80 ? address.slice(0, 80) + '...' : address}
+              </p>
+            )}
           </div>
 
           <Map
@@ -203,7 +327,7 @@ export default function NewOrderPage() {
               { lat, lng, label: 'Vous', color: 'blue' },
               ...pharmacies.map(p => ({ lat: p.lat || 0, lng: p.lng || 0, label: p.pharmacyName || '', color: 'green' })),
             ]}
-            onMapClick={(newLat, newLng) => { setLat(newLat); setLng(newLng); }}
+            onMapClick={handleMapClick}
           />
 
           <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
@@ -226,7 +350,7 @@ export default function NewOrderPage() {
             <button onClick={() => setStep(1)} className="btn-secondary flex-1 flex items-center justify-center gap-2">
               <ChevronLeft className="h-5 w-5" /> Retour
             </button>
-            <button disabled={!selectedPharmacy} onClick={() => setStep(3)} className="btn-primary flex-1 flex items-center justify-center gap-2">
+            <button disabled={!selectedPharmacy || !address} onClick={() => setStep(3)} className="btn-primary flex-1 flex items-center justify-center gap-2">
               Continuer <ChevronRight className="h-5 w-5" />
             </button>
           </div>
@@ -240,6 +364,7 @@ export default function NewOrderPage() {
 
           <div className="space-y-3 p-5 bg-dark-50/50 rounded-2xl">
             <div className="flex justify-between text-sm"><span className="text-dark-500">Pharmacie</span><span className="font-semibold text-dark-900">{selectedPharmacy?.pharmacyName}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-dark-500">Livraison</span><span className="font-medium text-dark-700 text-right max-w-[60%] truncate">{address}</span></div>
             <div className="flex justify-between text-sm"><span className="text-dark-500">Distance</span><span className="font-medium">{distance} km</span></div>
             <div className="flex justify-between text-sm"><span className="text-dark-500">Frais de base</span><span>2.00 &euro;</span></div>
             <div className="flex justify-between text-sm"><span className="text-dark-500">Frais distance ({distance} km &times; 0.50&euro;)</span><span>{distance ? (distance * 0.5).toFixed(2) : '0.00'} &euro;</span></div>
