@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use, useCallback } from 'react';
+import { useState, useEffect, use, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, MapPin, Phone, User, Navigation, CheckCircle, Package, Shield, Euro, Locate } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
@@ -33,24 +33,36 @@ export default function MissionPage({ params }: { params: Promise<{ id: string }
     fetch(`/api/orders/${id}`).then(r => r.json()).then(d => setMission(d.order));
   }, [id]);
 
-  const updatePosition = useCallback(() => {
-    navigator.geolocation?.getCurrentPosition(pos => {
-      setMyLat(pos.coords.latitude);
-      setMyLng(pos.coords.longitude);
-      fetch(`/api/tracking/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      });
-    });
-  }, [id]);
+  const lastSentRef = useRef(0);
 
   useEffect(() => {
     if (!mission || !['PICKED_UP', 'IN_TRANSIT'].includes(mission.status)) return;
-    updatePosition();
-    const interval = setInterval(updatePosition, 10000);
-    return () => clearInterval(interval);
-  }, [mission, updatePosition]);
+
+    const watchId = navigator.geolocation?.watchPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setMyLat(latitude);
+        setMyLng(longitude);
+
+        const now = Date.now();
+        const interval = mission.status === 'IN_TRANSIT' ? 5000 : 10000;
+        if (now - lastSentRef.current >= interval) {
+          lastSentRef.current = now;
+          fetch(`/api/tracking/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat: latitude, lng: longitude }),
+          });
+        }
+      },
+      undefined,
+      { enableHighAccuracy: true, maximumAge: 3000 }
+    );
+
+    return () => {
+      if (watchId !== undefined) navigator.geolocation?.clearWatch(watchId);
+    };
+  }, [mission?.status, id]);
 
   const updateStatus = async (status: string) => {
     setLoading(true);

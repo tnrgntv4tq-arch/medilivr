@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { Package, MapPin, Phone, Clock, User } from 'lucide-react';
+import { Package, MapPin, Phone, Clock, User, Wifi, WifiOff } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import StatusBadge from '@/components/StatusBadge';
 import { ORDER_STATUS_LABELS, type OrderStatus } from '@/types';
+import { useTrackingSSE } from '@/hooks/useTrackingSSE';
 
 const Map = dynamic(() => import('@/components/Map'), { ssr: false });
 
@@ -25,15 +26,22 @@ const STEPS: OrderStatus[] = ['PENDING', 'ACCEPTED', 'PREPARING', 'READY', 'PICK
 export default function TrackPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [tracking, setTracking] = useState<Tracking | null>(null);
+  const sse = useTrackingSSE(id);
 
   useEffect(() => {
-    const fetchTracking = () => {
-      fetch(`/api/tracking/${id}`).then(r => r.json()).then(d => setTracking(d.tracking));
-    };
-    fetchTracking();
-    const interval = setInterval(fetchTracking, 5000);
-    return () => clearInterval(interval);
+    fetch(`/api/tracking/${id}`).then(r => r.json()).then(d => setTracking(d.tracking));
   }, [id]);
+
+  useEffect(() => {
+    if (!tracking || !sse.status) return;
+    setTracking(prev => prev ? {
+      ...prev,
+      deliveryLat: sse.deliveryLat ?? prev.deliveryLat,
+      deliveryLng: sse.deliveryLng ?? prev.deliveryLng,
+      status: sse.status ?? prev.status,
+      delivery: sse.delivery ?? prev.delivery,
+    } : null);
+  }, [sse.deliveryLat, sse.deliveryLng, sse.status, sse.delivery]);
 
   if (!tracking) return (
     <div className="text-center py-16 text-dark-400">
@@ -122,9 +130,14 @@ export default function TrackPage({ params }: { params: Promise<{ id: string }> 
           </div>
         )}
         {['IN_TRANSIT', 'PICKED_UP'].includes(tracking.status) && (
-          <div className="flex items-center gap-2 text-xs text-primary-600 bg-primary-50 px-3 py-2 rounded-xl">
-            <Clock className="h-3.5 w-3.5 animate-pulse-soft" />
-            Mise à jour automatique toutes les 5 secondes
+          <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-xl ${
+            sse.isConnected ? 'text-primary-600 bg-primary-50' : 'text-amber-600 bg-amber-50'
+          }`}>
+            {sse.isConnected ? (
+              <><Wifi className="h-3.5 w-3.5 animate-pulse-soft" /> Suivi en direct</>
+            ) : (
+              <><WifiOff className="h-3.5 w-3.5" /> Reconnexion...</>
+            )}
           </div>
         )}
       </div>

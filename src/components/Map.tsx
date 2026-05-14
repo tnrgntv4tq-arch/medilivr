@@ -33,6 +33,7 @@ export default function Map({ center, zoom = 13, markers = [], className = 'h-64
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const markersLayer = useRef<L.LayerGroup | null>(null);
+  const markerMap = useRef(new globalThis.Map<string, L.Marker>());
   const onMapClickRef = useRef(onMapClick);
 
   onMapClickRef.current = onMapClick;
@@ -78,12 +79,29 @@ export default function Map({ center, zoom = 13, markers = [], className = 'h-64
   useEffect(() => {
     if (!mapInstance.current || !markersLayer.current) return;
 
-    markersLayer.current.clearLayers();
+    const currentKeys = new Set<string>();
 
     markers.forEach((m) => {
-      L.marker([m.lat, m.lng], { icon: createIcon(m.color || 'blue') })
-        .addTo(markersLayer.current!)
-        .bindPopup(`<div style="font-family:Inter,system-ui,sans-serif;font-size:13px;font-weight:600;padding:2px 0">${m.label}</div>`);
+      const key = m.label;
+      currentKeys.add(key);
+
+      const existing = markerMap.current.get(key);
+      if (existing) {
+        existing.setLatLng([m.lat, m.lng]);
+        existing.setIcon(createIcon(m.color || 'blue'));
+      } else {
+        const marker = L.marker([m.lat, m.lng], { icon: createIcon(m.color || 'blue') })
+          .addTo(markersLayer.current!)
+          .bindPopup(`<div style="font-family:Inter,system-ui,sans-serif;font-size:13px;font-weight:600;padding:2px 0">${m.label}</div>`);
+        markerMap.current.set(key, marker);
+      }
+    });
+
+    markerMap.current.forEach((marker, key) => {
+      if (!currentKeys.has(key)) {
+        markersLayer.current!.removeLayer(marker);
+        markerMap.current.delete(key);
+      }
     });
 
     if (markers.length > 1) {
