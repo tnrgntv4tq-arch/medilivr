@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.env
+.env.local
+*.db
+*.db-journal
+uploads/
+dist/
+.vercel
+test-stripe-e2e.mjs
