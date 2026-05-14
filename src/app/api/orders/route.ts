@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
         prescriptionPath: fileName,
         prescriptionIV: iv,
         prescriptionKey: encryptedKeyStr,
-        prescriptionData: encrypted,
+        prescriptionData: Uint8Array.from(encrypted),
         clientAddress,
         clientLat,
         clientLng,

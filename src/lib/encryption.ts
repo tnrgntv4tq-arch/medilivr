@@ -2,7 +2,7 @@ import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
 
-export function encryptBuffer(data: Buffer): { encrypted: Buffer; iv: string; key: string; tag: string } {
+export function encryptBuffer(data: Buffer): { encrypted: Buffer; iv: string; key: string } {
   const key = randomBytes(32);
   const iv = randomBytes(16);
   const cipher = createCipheriv(ALGORITHM, key, iv);

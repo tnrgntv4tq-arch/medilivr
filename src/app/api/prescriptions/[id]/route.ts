@@ -28,7 +28,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const dataKey = decryptKey(order.prescriptionKey);
     const decrypted = decryptBuffer(encryptedData, order.prescriptionIV, dataKey);
 
-    return new NextResponse(decrypted, {
+    return new NextResponse(new Uint8Array(decrypted), {
       headers: {
         'Content-Type': 'image/jpeg',
         'Content-Disposition': 'inline',

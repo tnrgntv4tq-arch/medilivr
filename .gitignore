@@ -8,3 +8,4 @@ uploads/
 dist/
 .vercel
 test-stripe-e2e.mjs
+.env*.local
