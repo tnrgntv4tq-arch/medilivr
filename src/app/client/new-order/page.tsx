@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Upload, MapPin, CreditCard, Camera, FileText, ChevronRight, ChevronLeft, Check, Shield, Locate, Search, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
@@ -55,6 +55,8 @@ async function searchAddress(query: string): Promise<AddressSuggestion[]> {
 
 export default function NewOrderPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preselectedPharmacyId = searchParams.get('pharmacyId');
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -76,7 +78,14 @@ export default function NewOrderPage() {
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch('/api/pharmacies').then(r => r.json()).then(d => setPharmacies(d.pharmacies || []));
+    fetch('/api/pharmacies').then(r => r.json()).then(d => {
+      const list = d.pharmacies || [];
+      setPharmacies(list);
+      if (preselectedPharmacyId) {
+        const match = list.find((p: Pharmacy) => p.id === preselectedPharmacyId);
+        if (match) setSelectedPharmacy(match);
+      }
+    });
     handleLocate();
   }, []);
 
